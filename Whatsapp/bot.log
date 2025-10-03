@@ -1,0 +1,101 @@
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwMjE4QjIwRTQxMDVCRDI2MDU3AA==', 'timestamp': '1759419718', 'text': {'body': 'what is my next visit and what is my participation status?'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:42:01] "POST /webhook HTTP/1.1" 200 -
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'statuses': [{'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgARGBI2NzgwMzE0OENDQjJBMEZDNUIA', 'status': 'sent', 'timestamp': '1759419784', 'recipient_id': '96178895407', 'conversation': {'id': 'ae433da6e938794e2c9ab08dda8603e1', 'expiration_timestamp': '1759419784', 'origin': {'type': 'utility'}}, 'pricing': {'billable': False, 'pricing_model': 'PMP', 'category': 'utility', 'type': 'free_customer_service'}}]}, 'field': 'messages'}]}]}
+INFO:gateway:Status update: sent
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:43:05] "POST /webhook HTTP/1.1" 200 -
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'statuses': [{'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgARGBI2NzgwMzE0OENDQjJBMEZDNUIA', 'status': 'delivered', 'timestamp': '1759419784', 'recipient_id': '96178895407', 'conversation': {'id': 'ae433da6e938794e2c9ab08dda8603e1', 'origin': {'type': 'utility'}}, 'pricing': {'billable': False, 'pricing_model': 'PMP', 'category': 'utility', 'type': 'free_customer_service'}}]}, 'field': 'messages'}]}]}
+INFO:gateway:Status update: delivered
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:43:05] "POST /webhook HTTP/1.1" 200 -
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'statuses': [{'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgARGBI2NzgwMzE0OENDQjJBMEZDNUIA', 'status': 'read', 'timestamp': '1759419787', 'recipient_id': '96178895407', 'conversation': {'id': 'ae433da6e938794e2c9ab08dda8603e1', 'origin': {'type': 'utility'}}, 'pricing': {'billable': False, 'pricing_model': 'PMP', 'category': 'utility', 'type': 'free_customer_service'}}]}, 'field': 'messages'}]}]}
+INFO:gateway:Status update: read
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:43:08] "POST /webhook HTTP/1.1" 200 -
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwQjQ3Q0NCOUJCQTJGQzZFM0E1AA==', 'timestamp': '1759419812', 'text': {'body': 'what is my next visit and what is my participation status?'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:43:33] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwRjkzQTlEQzM3NzMyNDU3NDY0AA==', 'timestamp': '1759420070', 'text': {'body': 'hi'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:47:52] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwREVFNUMzMzFDMzREQTM5QkFBAA==', 'timestamp': '1759420148', 'text': {'body': 'hii'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 18:49:10] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBQzQTc1RUE4NDQzQTVCODg5NzZGOQA=', 'timestamp': '1759425282', 'text': {'body': 'Hii'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:14:45] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwM0Q4OEJCQzVENThEMjE5MjU5AA==', 'timestamp': '1759426747', 'text': {'body': 'hi'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:39:11] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwRTE5NjhDMjBDRTNCMzNEOTAxAA==', 'timestamp': '1759426841', 'text': {'body': 'hi'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:40:43] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwMEY5OTUyOUM1QUE1Rjc5NDA5AA==', 'timestamp': '1759426870', 'text': {'body': 'hi'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:41:12] "POST /webhook HTTP/1.1" 200 -
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBQzQTRCMTEwNEMxNjE0MzNDRDlFNAA=', 'timestamp': '1758898360', 'text': {'body': 'Hii'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:44:17] "POST /webhook HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in 'C:\\Users\\hadib\\PycharmProjects\\PythonProject1\\Whatsapp\\utils.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 424-433-926
+INFO:gateway:Incoming: {'object': 'whatsapp_business_account', 'entry': [{'id': '2967030466811303', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '15556408713', 'phone_number_id': '783002668238332'}, 'contacts': [{'profile': {'name': 'HadyAladinn'}, 'wa_id': '96178895407'}], 'messages': [{'from': '96178895407', 'id': 'wamid.HBgLOTYxNzg4OTU0MDcVAgASGBYzRUIwMUUxRkNDMTBGNDYwQTEzMUUyAA==', 'timestamp': '1759427350', 'text': {'body': 'hii'}, 'type': 'text'}]}, 'field': 'messages'}]}]}
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+ERROR:gateway:Webhook error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************7jYA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO:werkzeug:127.0.0.1 - - [02/Oct/2025 20:49:12] "POST /webhook HTTP/1.1" 200 -
