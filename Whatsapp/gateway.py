@@ -3,26 +3,30 @@ import os
 from flask import Flask, request
 from dotenv import load_dotenv
 
-# Load .env variables
-load_dotenv()
-
 # FSM manager (stateful)
 from backend.fsm_manager import advance_state
 
 # Intent detector (multi-intent version)
 from backend.intent_detector import detect_intents
 
+# AI fallback service
+from Whatsapp.ai_service import get_ai_reply
+
 # WhatsApp send function
 from Whatsapp.utils import send_text
 
-# AI fallback service
-from Whatsapp.ai_service import get_ai_reply  # make sure ai_service.py defines this
+# Media handlers
+from Whatsapp.media_service import handle_receipt, save_file
+from backend.receipt_database import get_or_create_participant, get_or_create_claim
 
+load_dotenv()
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("gateway")
+
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 
 @app.route("/webhook", methods=["GET"])
@@ -33,8 +37,6 @@ def verify():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
-
-    VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
     if mode == "subscribe" and token == VERIFY_TOKEN:
         return challenge, 200
@@ -52,23 +54,18 @@ def webhook():
 
         if "messages" in change:
             msg_raw = change["messages"][0]
-            sender = msg_raw["from"]  # WhatsApp number
-            body_text = msg_raw.get("text", {}).get("body", "")
-            print("Got body:", body_text)
+            sender = msg_raw["from"]
+            msg_type = msg_raw["type"]
 
-            # Step 1: detect intents
-            intents = detect_intents(body_text)
-            print("Detected intents:", intents)
+            # Case 1: Text message
+            if msg_type == "text":
+                body_text = msg_raw.get("text", {}).get("body", "")
+                logger.info(f"Got text: {body_text}")
 
-            reply_map = {
-                "WAITING_FOR_RECEIPT": "Please upload your receipt.",
-                "RECEIPT_RECEIVED": "Receipt received, validating now...",
-                "VALIDATED": "Your claim was validated.",
-                "DONE": "Workflow complete."
-            }
+                intents = detect_intents(body_text)
+                logger.info(f"Detected intents: {intents}")
 
-            if intents:
-                # FSM routing
+                handled = False
                 for intent in intents:
                     if intent in ("begin", "upload", "validate_ok", "finish", "reset"):
                         workflow = "claims_upload_workflow"
@@ -77,19 +74,51 @@ def webhook():
                     elif intent == "provide_id":
                         workflow = "run_workflow"
                     else:
-                        workflow = "claims_upload_workflow"
+                        workflow = None
 
-                    print(f"Advancing state: {sender} {workflow} {intent}")
-                    new_state = advance_state(sender, workflow, intent)
-                    reply = reply_map.get(new_state, f"Processed intent {intent}")
-                    print(f"Reply: {reply}")
+                    if workflow:
+                        logger.info(f"Advancing state: {sender} {workflow} {intent}")
+                        new_state = advance_state(sender, workflow, intent)
+
+                        reply_map = {
+                            "WAITING_FOR_RECEIPT": "Please upload your receipt.",
+                            "RECEIPT_RECEIVED": "Receipt received, validating now...",
+                            "VALIDATED": "Your claim was validated.",
+                            "DONE": "Workflow complete."
+                        }
+                        reply = reply_map.get(new_state, f"Processed intent {intent}")
+                        send_text(sender, reply)
+                        handled = True
+
+                if not handled:
+                    reply = get_ai_reply(body_text)
                     send_text(sender, reply)
 
-            else:
-                # Step 2: Fallback to OpenAI
-                ai_reply = get_ai_reply(body_text)
-                print(f"AI reply: {ai_reply}")
-                send_text(sender, ai_reply)
+            # Case 2: PDF document upload
+            elif msg_type == "document":
+                media_id = msg_raw["document"]["id"]
+
+                try:
+                    # Step 1: ensure participant exists
+                    participant_id = get_or_create_participant(sender)
+
+                    # Step 2: ensure participant has an active claim
+                    claim_id = get_or_create_claim(participant_id)
+
+                    # Step 3: handle receipt
+                    confirmation = handle_receipt(media_id, claim_id, participant_id)
+                    send_text(sender, message=f"✅ {confirmation}")
+                    advance_state(sender, "claims_upload_workflow", "upload")
+
+                except Exception as e:
+                    send_text(sender, message=f"❌ Error handling receipt: {e}")
+
+            # Case 3: Image upload
+            elif msg_type == "image":
+                media_id = msg_raw["image"]["id"]
+                path = save_file(media_id, "jpg")
+                send_text(sender, f"🖼️ Image received and saved at {path}. OCR will be added later.")
+                advance_state(sender, "claims_upload_workflow", "upload")
 
         elif "statuses" in change:
             status = change["statuses"][0]["status"]

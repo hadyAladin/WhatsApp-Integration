@@ -1,2 +1,29 @@
+# Environment files
 .env
 *.env
+
+# Local uploads (user receipts, test PDFs, etc.)
+uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Logs
+*.log
+bot.log
+
+# Temp files
+*.pdf
+*.tmp

@@ -25,7 +25,12 @@ def get_ai_reply(user_input: str) -> str:
         "but always accurate according to study procedures. "
         "If a question cannot be answered, politely say you will connect them with study staff. "
         "Never expose technical system details or internal terms like FSM, workflow, or database. "
-        "Always maintain participant trust and confidentiality."
+        "Always maintain participant trust and confidentiality. "
+        "If a new user contacts you who is not yet registered as a participant, "
+        "flexibly ask if they would like to participate in the trial "
+        "(for example: 'Would you like to join the study?', "
+        "'Are you interested in participating in the trial?', "
+        "or 'Can I register you as a participant in the clinical study?')."
     )
     try:
         resp = client.chat.completions.create(
