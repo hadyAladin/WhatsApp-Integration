@@ -1,14 +1,43 @@
+import json
 import os
 import uuid
-import magic  # for MIME type detection
-import fitz   # PyMuPDF for PDFs
+import magic
+import fitz
+import logging
 from .adapter_meta import download_media
-from backend.connect_supabase import supabase, log_receipt
+from backend.connect_supabase import supabase, log_receipt  # <<< هيدا هو
+from openai import OpenAI
+from datetime import datetime, timezone
+logger = logging.getLogger("media_service")
+logger.setLevel(logging.INFO)
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-BUCKET = "receipts"  # Supabase storage bucket
+BUCKET = "receipts"
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_PROJECT"))
+
+
+def detect_pdf_intent(text: str):
+    prompt = f"""
+    You are a document intent classifier.
+    Read the following text and answer in JSON strictly like this:
+    {{
+      "intent": "visit_schedule" or "receipt_upload" or "other",
+      "visit_date": "YYYY-MM-DD HH:MM" or null
+    }}
+    Text:
+    {text[:4000]}
+    """
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}]
+    )
+    try:
+        return json.loads(resp.choices[0].message.content)
+    except Exception:
+        return {"intent": "receipt_upload", "visit_date": None}
 
 def save_file(media_id: str, filename: str = None) -> str:
     """
@@ -98,6 +127,47 @@ def handle_receipt(media_id: str, claim_id: str, participant_id: str) -> str:
     if ext == "pdf":
         tmp_path = save_pdf(media_id)
         text = extract_pdf_text(tmp_path)
+
+        # Step: analyze PDF intent
+        intent_data = detect_pdf_intent(text)
+
+        if intent_data["intent"] == "visit_schedule" and intent_data["visit_date"]:
+            from backend.reminder_service import schedule_reminder
+            from datetime import datetime
+
+            visit_dt = datetime.fromisoformat(intent_data["visit_date"])
+
+            # update participant’s next visit
+            supabase.table("participants").update({
+                "next_visit_at": visit_dt.isoformat()
+            }).eq("id", participant_id).execute()
+
+            # Schedule 3 distinct reminders
+            schedule_reminder(
+                participant_id,
+                f"🗓️ Visit scheduled on {visit_dt:%d %b %H:%M}",
+                delay_minutes=0,
+                template_type="visit_created",
+                immediate=True  # new flag
+            )
+            schedule_reminder(
+                participant_id,
+                "⏰ Reminder: your visit is in 2 days.",
+                delay_minutes=(2 * 24 * 60),
+                template_type="visit_2days"
+            )
+            schedule_reminder(
+                participant_id,
+                "⏰ Reminder: your visit is in 2 hours.",
+                delay_minutes=(2 * 60),
+                template_type="visit_2hours"
+            )
+
+            return f"✅ Visit scheduled for {visit_dt:%d %b %H:%M}. Reminders set."
+
+        else:
+            logger.info("Regular receipt detected – no visit reminders scheduled.")
+
         preview = text[:200] if text.strip() else "No text extracted."
 
     return f"✅ Receipt saved. Signed link: {signed_url['signedURL']}\n📄 Preview: {preview}"
