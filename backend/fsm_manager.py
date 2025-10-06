@@ -1,6 +1,5 @@
-# backend/fsm_manager.py
 import logging
-
+from backend.connect_supabase import supabase
 from backend.fsm import step
 
 logger = logging.getLogger("fsm_manager")
