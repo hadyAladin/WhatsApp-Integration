@@ -1,9 +1,9 @@
 import os
 import requests
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 # Load .env variables
-load_dotenv()
+load_dotenv(find_dotenv())
 
 # Base URL of your brother's RAG backend
 RAG_BASE_URL = os.getenv("RAG_BASE_URL", "http://localhost:8000")

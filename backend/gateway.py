@@ -1,7 +1,8 @@
 import logging
 import os
 from flask import Flask, request
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
+from supabase import create_client, Client
 
 # FSM manager (stateful)
 from backend.fsm_manager import advance_state
@@ -10,16 +11,16 @@ from backend.fsm_manager import advance_state
 from backend.intent_detector import detect_intents
 
 # AI fallback service
-from Whatsapp.ai_service import get_ai_reply
+from .ai_service import get_ai_reply
 
 # WhatsApp send function
-from Whatsapp.utils import send_text
+from .utils import send_text
+from .media_service import handle_receipt, save_file
 
-# Media handlers
-from Whatsapp.media_service import handle_receipt, save_file
+
 from backend.receipt_database import get_or_create_participant, get_or_create_claim
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 app = Flask(__name__)
 
@@ -97,6 +98,7 @@ def webhook():
             # Case 2: PDF document upload
             elif msg_type == "document":
                 media_id = msg_raw["document"]["id"]
+
 
                 try:
                     # Step 1: ensure participant exists

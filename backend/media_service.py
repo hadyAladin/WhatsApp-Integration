@@ -4,25 +4,52 @@ import uuid
 import magic
 import fitz
 import logging
-from .adapter_meta import download_media
-from backend.connect_supabase import supabase, log_receipt  # <<< هيدا هو
+from datetime import datetime
 from openai import OpenAI
-from datetime import datetime, timezone
+from typing import Any
+
+from supabase import Client, create_client
+from dotenv import load_dotenv, find_dotenv
+
+# ---------------- Safe imports (local + Docker) ----------------
+try:
+    from reminder_service import schedule_reminder
+    from adapter_meta import download_media
+except ModuleNotFoundError:
+    from backend.reminder_service import schedule_reminder
+    from backend.adapter_meta import download_media
+    from backend.connect_supabase import log_receipt
+
+
+# ---------------- Logging setup ----------------
 logger = logging.getLogger("media_service")
 logger.setLevel(logging.INFO)
 
+# ---------------- Directory setup ----------------
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 BUCKET = "receipts"
 
+# ---------------- OpenAI client ----------------
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY_PROJECT"))
 
+# --------------- Supabase Client --------------
 
+load_dotenv(find_dotenv())
+
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+sb: Client = create_client(supabase_url, supabase_key)
+
+# ---------------- Utility functions ----------------
 def detect_pdf_intent(text: str):
+    """
+    Classify PDF content into visit_schedule / receipt_upload / other.
+    """
     prompt = f"""
     You are a document intent classifier.
-    Read the following text and answer in JSON strictly like this:
+    Read the following text and answer strictly in JSON:
     {{
       "intent": "visit_schedule" or "receipt_upload" or "other",
       "visit_date": "YYYY-MM-DD HH:MM" or null
@@ -39,26 +66,20 @@ def detect_pdf_intent(text: str):
     except Exception:
         return {"intent": "receipt_upload", "visit_date": None}
 
-def save_file(media_id: str, filename: str = None) -> str:
-    """
-    Download any WhatsApp media and save it locally.
-    Returns the local file path.
-    """
-    data = download_media(media_id)
 
+def save_file(media_id: str, filename: str = None) -> str:
+    """Download any WhatsApp media and save locally."""
+    data = download_media(media_id)
     if not filename:
         filename = f"{media_id}.bin"
-
     path = os.path.join(UPLOAD_DIR, filename)
     with open(path, "wb") as f:
         f.write(data)
-
     return path
 
+
 def validate_file(data: bytes, expected_types=("application/pdf", "image/jpeg", "image/png")):
-    """
-    Validate MIME type of uploaded file.
-    """
+    """Validate MIME type of uploaded file."""
     mime = magic.from_buffer(data, mime=True)
     if mime not in expected_types:
         raise ValueError(f"Invalid file type: {mime}")
@@ -66,28 +87,19 @@ def validate_file(data: bytes, expected_types=("application/pdf", "image/jpeg", 
 
 
 def store_to_supabase(data: bytes, ext: str) -> str:
-    """
-    Upload to Supabase storage and return signed URL.
-    """
+    """Upload to Supabase storage and return signed URL."""
     filename = f"{uuid.uuid4()}.{ext}"
-    path = f"receipts/{filename}"
-
-    # Upload
-    supabase.storage.from_(BUCKET).upload(path, data)
-
-    # Generate signed URL valid for 1 hour
-    signed_url = supabase.storage.from_(BUCKET).create_signed_url(path, 3600)
+    path = f"{BUCKET}/{filename}"
+    sb.storage.from_(BUCKET).upload(path, data)
+    signed_url = sb.storage.from_(BUCKET).create_signed_url(path, 3600)
     return signed_url["signedURL"]
 
 
 def save_pdf(media_id: str, filename: str = None) -> str:
-    """
-    Save a PDF locally from WhatsApp media.
-    """
+    """Save a PDF locally from WhatsApp media."""
     data = download_media(media_id)
     if not filename:
         filename = f"{media_id}.pdf"
-
     path = os.path.join(UPLOAD_DIR, filename)
     with open(path, "wb") as f:
         f.write(data)
@@ -95,60 +107,54 @@ def save_pdf(media_id: str, filename: str = None) -> str:
 
 
 def extract_pdf_text(path: str) -> str:
-    """
-    Extract text from a PDF file using PyMuPDF.
-    """
+    """Extract text from a PDF file using PyMuPDF."""
     doc = fitz.open(path)
     text = "".join([page.get_text() for page in doc])
     doc.close()
     return text
 
 
+# ---------------- Main handler ----------------
 def handle_receipt(media_id: str, claim_id: str, participant_id: str) -> str:
+    """Process receipt or visit-schedule PDF."""
     data = download_media(media_id)
 
-    # 1. Validate
+    # 1. Validate file type
     mime = validate_file(data)
     ext = "pdf" if mime == "application/pdf" else "jpg"
 
-    # 2. Upload
+    # 2. Upload to Supabase
     filename = f"{uuid.uuid4()}.{ext}"
-    file_path = f"receipts/{filename}"
-    supabase.storage.from_(BUCKET).upload(file_path, data)
+    file_path = f"{BUCKET}/{filename}"
+    sb.storage.from_(BUCKET).upload(file_path, data)
 
-    # 3. Save in DB
+    # 3. Log in DB
     log_receipt(claim_id, participant_id, file_path)
 
-    # 4. Signed link for preview
-    signed_url = supabase.storage.from_(BUCKET).create_signed_url(file_path, 3600)
+    # 4. Signed URL
+    signed_url = sb.storage.from_(BUCKET).create_signed_url(file_path, 3600)["signedURL"]
 
-    # 5. Extract preview if PDF
+    # 5. If PDF, analyze and maybe schedule reminders
     preview = ""
     if ext == "pdf":
         tmp_path = save_pdf(media_id)
         text = extract_pdf_text(tmp_path)
-
-        # Step: analyze PDF intent
         intent_data = detect_pdf_intent(text)
 
         if intent_data["intent"] == "visit_schedule" and intent_data["visit_date"]:
-            from backend.reminder_service import schedule_reminder
-            from datetime import datetime
-
             visit_dt = datetime.fromisoformat(intent_data["visit_date"])
 
-            # update participant’s next visit
-            supabase.table("participants").update({
+            sb.table("participants").update({
                 "next_visit_at": visit_dt.isoformat()
             }).eq("id", participant_id).execute()
 
-            # Schedule 3 distinct reminders
+            # Schedule 3 notifications
             schedule_reminder(
                 participant_id,
                 f"🗓️ Visit scheduled on {visit_dt:%d %b %H:%M}",
                 delay_minutes=0,
                 template_type="visit_created",
-                immediate=True  # new flag
+                immediate=True
             )
             schedule_reminder(
                 participant_id,
@@ -167,8 +173,6 @@ def handle_receipt(media_id: str, claim_id: str, participant_id: str) -> str:
 
         else:
             logger.info("Regular receipt detected – no visit reminders scheduled.")
+            preview = text[:200] if text.strip() else "No text extracted."
 
-        preview = text[:200] if text.strip() else "No text extracted."
-
-    return f"✅ Receipt saved. Signed link: {signed_url['signedURL']}\n📄 Preview: {preview}"
-
+    return f"✅ Receipt saved. Signed link: {signed_url}\n📄 Preview: {preview}"

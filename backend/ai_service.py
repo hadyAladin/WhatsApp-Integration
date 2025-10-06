@@ -3,9 +3,9 @@ import os
 from openai import OpenAI
 from .adapter_meta import download_media
 from .media_service import save_pdf, extract_pdf_text
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY_PROJECT"),

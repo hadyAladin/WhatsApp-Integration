@@ -1,28 +1,31 @@
-import logging, time
+import logging
+import time
 from datetime import datetime, timedelta, timezone
-from backend.connect_supabase import supabase
-from Whatsapp.utils import send_text
+from logging.handlers import RotatingFileHandler
+try:
+    from utils import send_text
+except ImportError:
+    from backend.utils import send_text
+try:
+    from connect_supabase import supabase, log_receipt
+except ModuleNotFoundError:
+    from backend.connect_supabase import supabase, log_receipt
 
+
+# ---------------- Logging ----------------
+LOG_FILE = "reminder_service.log"
+handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=3)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[handler, logging.StreamHandler()]
+)
 logger = logging.getLogger("reminder_service")
 
-# -------- Helper: get phone --------
+# ---------------- Helpers ----------------
 def get_phone(participant_id: str):
     resp = supabase.table("participants").select("phone_number").eq("id", participant_id).execute()
     return resp.data[0]["phone_number"] if resp.data else None
-
-def already_scheduled(participant_id: str, template_type: str, visit_date: datetime) -> bool:
-    """
-    Check if a reminder of this type is already scheduled for the same participant and visit_date.
-    """
-    resp = (
-        supabase.table("notifications")
-        .select("id")
-        .eq("participant_id", participant_id)
-        .eq("template_type", template_type)
-        .eq("visit_date", visit_date.isoformat())
-        .execute()
-    )
-    return len(resp.data) > 0
 
 
 def schedule_reminder(
@@ -33,25 +36,23 @@ def schedule_reminder(
     visit_date: datetime | None = None,
     immediate: bool = False
 ):
-    from datetime import datetime, timedelta, timezone
-
-    scheduled_time = (
-        datetime.now(timezone.utc) if immediate
-        else datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
-    )
-
-    # fallback: use scheduled_time as visit_date if not provided
+    now = datetime.now(timezone.utc)
+    scheduled_time = now if immediate else now + timedelta(minutes=delay_minutes)
     visit_date_val = visit_date or scheduled_time
 
-    # simple dedupe check (query before insert)
-    existing = supabase.table("notifications").select("id").eq("participant_id", participant_id)\
-        .eq("template_type", template_type).eq("visit_date", visit_date_val.isoformat()).execute()
-
+    existing = (
+        supabase.table("notifications")
+        .select("id")
+        .eq("participant_id", participant_id)
+        .eq("template_type", template_type)
+        .eq("visit_date", visit_date_val.isoformat())
+        .execute()
+    )
     if existing.data:
-        logger.info(f"Skipped duplicate reminder for {participant_id}, type={template_type}, visit_date={visit_date_val}")
+        logger.info(f"Duplicate reminder skipped: participant={participant_id}, type={template_type}")
         return
 
-    payload = {
+    supabase.table("notifications").insert({
         "participant_id": participant_id,
         "message": message,
         "scheduled_at": scheduled_time.isoformat(),
@@ -59,13 +60,11 @@ def schedule_reminder(
         "status": "pending",
         "retry_count": 0,
         "visit_date": visit_date_val.isoformat(),
-    }
+    }).execute()
 
-    supabase.table("notifications").insert(payload).execute()
-    logger.info(f"Inserted reminder for {participant_id}, type={template_type}, scheduled_at={scheduled_time}")
+    logger.info(f"Scheduled reminder for {participant_id} at {scheduled_time} UTC")
 
 
-# -------- Core Sending --------
 def fetch_due_reminders(limit=5):
     now = datetime.now(timezone.utc).isoformat()
     resp = (
@@ -74,45 +73,63 @@ def fetch_due_reminders(limit=5):
         .lte("scheduled_at", now)
         .eq("status", "pending")
         .order("scheduled_at", desc=False)
-        .limit(limit)  # rate limit
+        .limit(limit)
         .execute()
     )
-    return resp.data
+    return resp.data or []
 
-def mark_as_status(reminder_id, status):
-    supabase.table("notifications").update({
-        "status": status,
-        "last_attempt": datetime.now(timezone.utc).isoformat()
-    }).eq("id", reminder_id).execute()
+
+def mark_as(reminder_id, status, retry_count=None):
+    payload = {"status": status, "last_attempt": datetime.now(timezone.utc).isoformat()}
+    if retry_count is not None:
+        payload["retry_count"] = retry_count
+    supabase.table("notifications").update(payload).eq("id", reminder_id).execute()
+
+
+# ---------------- Core Sending ----------------
+def process_reminder(r):
+    try:
+        phone = get_phone(r["participant_id"])
+        if not phone:
+            logger.error(f"No phone for participant {r['participant_id']}")
+            mark_as(r["id"], "failed")
+            return
+
+        send_text(phone, r["message"])
+        mark_as(r["id"], "sent")
+        logger.info(f"✅ Sent reminder {r['id']} to {phone}")
+
+    except Exception as e:
+        count = r.get("retry_count", 0) + 1
+        if count <= 3:
+            delay = 2 ** count  # exponential backoff minutes
+            retry_time = datetime.now(timezone.utc) + timedelta(minutes=delay)
+            supabase.table("notifications").update({
+                "retry_count": count,
+                "status": "pending",
+                "scheduled_at": retry_time.isoformat(),
+            }).eq("id", r["id"]).execute()
+            logger.warning(f"⚠️ Retry {count}/3 scheduled for reminder {r['id']} after {delay} min ({e})")
+        else:
+            mark_as(r["id"], "failed")
+            logger.error(f"❌ Failed reminder {r['id']} after 3 retries: {e}")
+
 
 def send_due_reminders():
-    reminders = fetch_due_reminders(limit=5)  # rate limiting: max 5 per cycle
+    reminders = fetch_due_reminders(limit=5)
+    if not reminders:
+        return
+    logger.info(f"Processing {len(reminders)} due reminders...")
     for r in reminders:
-        try:
-            phone = get_phone(r["participant_id"])
-            if not phone:
-                logger.error(f"No phone for participant {r['participant_id']}")
-                mark_as_status(r["id"], "failed")
-                continue
+        process_reminder(r)
 
-            send_text(phone, r["message"])
-            mark_as_status(r["id"], "sent")
-            logger.info(f"Sent reminder {r['id']} to {phone}")
 
-        except Exception as e:
-            logger.error(f"Failed reminder {r['id']}: {e}")
-            # Retry policy: allow up to 3 attempts
-            if r.get("retry_count", 0) < 3:
-                supabase.table("notifications").update({
-                    "retry_count": r.get("retry_count", 0) + 1,
-                    "status": "pending"
-                }).eq("id", r["id"]).execute()
-            else:
-                mark_as_status(r["id"], "failed")
-
-# -------- Loop Runner --------
+# ---------------- Loop Runner ----------------
 if __name__ == "__main__":
-    logger.info("Reminder service started...")
+    logger.info("Reminder service started (runs locally or on VPS)...")
     while True:
-        send_due_reminders()
-        time.sleep(60)  # check every 1 minute
+        try:
+            send_due_reminders()
+        except Exception as e:
+            logger.exception(f"Loop error: {e}")
+        time.sleep(60)

@@ -1,7 +1,8 @@
 import hmac, hashlib, os
 from flask import request, abort
-from dotenv import load_dotenv
-load_dotenv()
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 APP_SECRET = os.getenv("APP_SECRET")
 processed_messages = set()

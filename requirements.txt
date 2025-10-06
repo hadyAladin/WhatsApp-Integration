@@ -1,0 +1,12 @@
+dotenv~=0.9.9
+python-dotenv~=1.1.1
+backend~=0.2.4.1
+requests~=2.32.5
+openai~=1.109.1
+Flask~=3.1.2
+supabase~=2.21.1
+utils~=1.0.2
+state~=0.1.1.dev0
+spacy~=3.8.7
+reportlab~=4.4.4
+fitz~=0.0.1.dev2
