@@ -4,6 +4,7 @@ from flask import Flask, request
 from dotenv import load_dotenv, find_dotenv
 from supabase import create_client, Client
 
+from backend.connect_supabase import supabase
 # FSM manager (stateful)
 from backend.fsm_manager import advance_state
 
@@ -43,6 +44,12 @@ def verify():
         return challenge, 200
     return "Forbidden", 403
 
+def get_participant_by_phone(phone: str):
+    """Retrieve participant record using their WhatsApp number."""
+    res = supabase.table("participants").select("*").eq("phone_number", phone).execute()
+    return res.data[0] if res.data else None
+
+
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -58,14 +65,32 @@ def webhook():
             sender = msg_raw["from"]
             msg_type = msg_raw["type"]
 
-            # Case 1: Text message
+            # 🧩 Case 1: Text message
             if msg_type == "text":
                 body_text = msg_raw.get("text", {}).get("body", "")
                 logger.info(f"Got text: {body_text}")
 
+                # ----- participant lookup -----
+                participant = get_participant_by_phone(sender)
+                next_visit = None
+                if participant:
+                    next_visit = participant.get("next_visit_at")
+
+                # ----- intent detection -----
                 intents = detect_intents(body_text)
                 logger.info(f"Detected intents: {intents}")
 
+                # --- new intent: user asks about visit date ---
+                if "visit_inquiry" in intents or "visit_date" in body_text.lower():
+                    if participant and next_visit:
+                        send_text(sender, f"📅 Your next visit is scheduled on {next_visit[:16]} UTC.")
+                    elif participant and not next_visit:
+                        send_text(sender, "❌ You’re registered but have no upcoming visit scheduled.")
+                    else:
+                        send_text(sender, "👋 I couldn’t find your record yet. Please upload your visit schedule PDF so I can register you in the system.")
+                    return "OK", 200
+
+                # ----- workflow logic -----
                 handled = False
                 for intent in intents:
                     if intent in ("begin", "upload", "validate_ok", "finish", "reset"):
@@ -95,19 +120,14 @@ def webhook():
                     reply = get_ai_reply(body_text)
                     send_text(sender, reply)
 
-            # Case 2: PDF document upload
+            # 🧩 Case 2: PDF document upload
             elif msg_type == "document":
                 media_id = msg_raw["document"]["id"]
 
-
                 try:
-                    # Step 1: ensure participant exists
                     participant_id = get_or_create_participant(sender)
-
-                    # Step 2: ensure participant has an active claim
                     claim_id = get_or_create_claim(participant_id)
 
-                    # Step 3: handle receipt
                     confirmation = handle_receipt(media_id, claim_id, participant_id)
                     send_text(sender, message=f"✅ {confirmation}")
                     advance_state(sender, "claims_upload_workflow", "upload")
@@ -115,7 +135,7 @@ def webhook():
                 except Exception as e:
                     send_text(sender, message=f"❌ Error handling receipt: {e}")
 
-            # Case 3: Image upload
+            # 🧩 Case 3: Image upload
             elif msg_type == "image":
                 media_id = msg_raw["image"]["id"]
                 path = save_file(media_id, "jpg")

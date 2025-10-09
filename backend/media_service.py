@@ -43,28 +43,65 @@ supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 sb: Client = create_client(supabase_url, supabase_key)
 
 # ---------------- Utility functions ----------------
+
+import re
+from datetime import datetime
+
+def extract_visit_datetime(text: str) -> str | None:
+    """
+    Parse date and time strings into a single ISO 'YYYY-MM-DD HH:MM' value.
+    Handles formats like:
+    2025-10-10, 10/10/2025, 10 Oct 2025, 10:00 AM, 14:30, etc.
+    """
+    date_pat = re.search(r"(20\d{2}-\d{2}-\d{2})|(\d{1,2}[/-]\d{1,2}[/-]20\d{2})|(\d{1,2}\s+\w+\s+20\d{2})", text)
+    time_pat = re.search(r"(\d{1,2}:\d{2}\s?(AM|PM)?)", text, re.IGNORECASE)
+
+    if not date_pat:
+        return None
+    raw_date = next(g for g in date_pat.groups() if g)
+    raw_time = time_pat.group(1).replace(" ", "") if time_pat else "00:00"
+
+    # normalize to ISO
+    for fmt in ("%Y-%m-%d%I:%M%p", "%Y-%m-%d%H:%M", "%d/%m/%Y%I:%M%p", "%d/%m/%Y%H:%M",
+                "%d-%m-%Y%I:%M%p", "%d-%m-%Y%H:%M", "%d %b %Y%I:%M%p", "%d %b %Y%H:%M"):
+        try:
+            return datetime.strptime(raw_date + raw_time, fmt).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            continue
+    return None
+
+
+
 def detect_pdf_intent(text: str):
     """
-    Classify PDF content into visit_schedule / receipt_upload / other.
+    Safe classifier: LLM decides the intent, regex ensures exact date-time.
     """
-    prompt = f"""
-    You are a document intent classifier.
-    Read the following text and answer strictly in JSON:
-    {{
-      "intent": "visit_schedule" or "receipt_upload" or "other",
-      "visit_date": "YYYY-MM-DD HH:MM" or null
-    }}
-    Text:
-    {text[:4000]}
-    """
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}]
+    visit_dt = extract_visit_datetime(text)
+
+    # Fast keyword override
+    if "visit" in text.lower() and "schedule" in text.lower():
+        return {"intent": "visit_schedule", "visit_date": visit_dt}
+
+    # Ask LLM only for type
+    prompt = (
+        "Classify this text. Return JSON only: "
+        '{"intent":"visit_schedule"|"receipt_upload"|"other"}.\n'
+        "Consider it visit_schedule if it lists a participant ID, trial ID, or visit date/time.\n"
+        f"Text:\n{text[:1000]}"
     )
+
     try:
-        return json.loads(resp.choices[0].message.content)
-    except Exception:
-        return {"intent": "receipt_upload", "visit_date": None}
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini-fast",
+            messages=[{"role": "user", "content": prompt}],
+            timeout=5
+        )
+        intent = json.loads(resp.choices[0].message.content)["intent"]
+        return {"intent": intent, "visit_date": visit_dt}
+    except Exception as e:
+        logger.warning(f"AI classification error: {e}")
+        return {"intent": "receipt_upload", "visit_date": visit_dt}
+
 
 
 def save_file(media_id: str, filename: str = None) -> str:

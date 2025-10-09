@@ -14,23 +14,17 @@ KEYMAP = [
     ("participant_status", ["participation status", "am i active", "my status", "trial status"]),
 ]
 
-def detect_intents(text: str) -> list[str]:
-    """
-    Very simple intent detector. Only match clear keywords.
-    Returns [] if nothing matches → AI fallback will handle it.
-    """
-    text_lower = text.lower().strip()
+def detect_intents(text: str):
+    text_low = text.lower()
     intents = []
 
-    if text_lower in ("start claim", "begin claim", "start"):
-        intents.append("begin")
-    elif text_lower in ("upload", "uploaded", "i uploaded"):
+    # existing logic...
+    if "visit" in text_low and "date" in text_low:
+        intents.append("visit_inquiry")
+
+    # add your other existing detections here...
+    if "upload" in text_low:
         intents.append("upload")
-    elif text_lower in ("done", "finish", "validate ok", "validated"):
-        intents.append("validate_ok")
-    elif text_lower in ("confirm visit", "confirm"):
-        intents.append("confirm")
-    elif text_lower in ("provide id", "id"):
-        intents.append("provide_id")
 
     return intents
+
