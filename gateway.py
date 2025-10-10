@@ -187,6 +187,19 @@ def webhook() -> Any:
     return jsonify(build_whatsapp_response("Sorry, I can only process text or receipt files/images right now.")), 200
 
 
+@app.route("/webhook", methods=["GET"])
+def verify_webhook():
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+
+    VERIFY_TOKEN = "12345"  
+
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        return challenge, 200
+    return "Forbidden", 403
+
+
 def handle_media_message(sender: str, message: Dict[str, Any]):
     success, file_bytes, filename, mime_type_or_error = download_media(message)
     if not success or file_bytes is None:
