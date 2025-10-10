@@ -7,10 +7,10 @@ import requests
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 
-# Load environment variables
+# ------------------- Load environment -------------------
 load_dotenv()
 
-# Logging
+# ------------------- Logging setup -------------------
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
@@ -19,21 +19,49 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Core config
+# ------------------- Core config -------------------
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
-PARTICIPANT_ID = os.getenv(
-    "PARTICIPANT_ID", "57d611ee-39c5-4495-883e-9f4db257bc83"
-)
+PARTICIPANT_ID = os.getenv("PARTICIPANT_ID", "57d611ee-39c5-4495-883e-9f4db257bc83")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "12345")
+
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
 TRIAL_ID_CACHE: Dict[str, Optional[str]] = {"value": None}
 user_states: Dict[str, Dict[str, Any]] = {}
 
-
+# ------------------- Exceptions -------------------
 class GatewayError(Exception):
     """Custom exception for gateway errors."""
 
 
+# ------------------- WhatsApp Send Helper -------------------
+def send_whatsapp_message(to: str, text: str) -> None:
+    """Send outbound WhatsApp message through Meta Graph API."""
+    if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
+        logger.error("Missing WhatsApp credentials in environment.")
+        return
+
+    url = f"https://graph.facebook.com/v20.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "text",
+        "text": {"body": text},
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        logger.info(f"Sent WhatsApp message to {to}, status={resp.status_code}, body={resp.text}")
+    except Exception as e:
+        logger.error(f"Failed to send WhatsApp message: {e}", exc_info=True)
+
+
+# ------------------- Backend Helpers -------------------
 def fetch_trial_id() -> Optional[str]:
     """Fetch and cache the participant's trial ID from the backend."""
     if TRIAL_ID_CACHE["value"]:
@@ -72,7 +100,7 @@ def call_rag_endpoint(question: str) -> Tuple[bool, str]:
     logger.info("Routing text message to %s", url)
 
     try:
-        response = requests.post(url, json=payload, timeout=15)
+        response = requests.post(url, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
         answer = data.get("answer", "I couldn't find an answer for that.")
@@ -140,14 +168,12 @@ def upload_receipt(visit_id: str, file_bytes: bytes, filename: str, mime_type: s
         return False, "Problem uploading receipt. Please try again later."
 
 
+# ------------------- State helpers -------------------
 def reset_user_state(sender: str) -> None:
     user_states.pop(sender, None)
 
 
-def build_whatsapp_response(text: str) -> Any:
-    return {"messages": [{"type": "text", "text": {"body": text}}]}
-
-
+# ------------------- Flask Routes -------------------
 @app.route("/webhook", methods=["POST"])
 def webhook() -> Any:
     data = request.get_json(force=True, silent=True) or {}
@@ -158,31 +184,37 @@ def webhook() -> Any:
 
     if not messages:
         logger.info("No messages found in webhook payload.")
-        return jsonify(build_whatsapp_response("")), 200
+        return "", 200
 
     message = messages[0]
     sender = message.get("from") or message.get("sender")
     if not sender:
-        return jsonify(build_whatsapp_response("Missing sender info.")), 200
+        return "", 200
 
     logger.info("Processing message from %s", sender)
 
     state = user_states.get(sender)
     if state and state.get("awaiting_visit_selection"):
-        return handle_visit_selection(sender, message)
+        handle_visit_selection(sender, message)
+        return "", 200
 
     msg_type = message.get("type")
+
     if msg_type == "text":
         text = message.get("text", {}).get("body", "").strip()
         if not text:
-            return jsonify(build_whatsapp_response("Please resend your message.")), 200
+            send_whatsapp_message(sender, "Please resend your message.")
+            return "", 200
         success, reply = call_rag_endpoint(text)
-        return jsonify(build_whatsapp_response(reply)), (200 if success else 500)
+        send_whatsapp_message(sender, reply)
+        return "", 200
 
     if msg_type in {"image", "video", "document"}:
-        return handle_media_message(sender, message)
+        handle_media_message(sender, message)
+        return "", 200
 
-    return jsonify(build_whatsapp_response("I can only process text or receipt files/images right now.")), 200
+    send_whatsapp_message(sender, "I can only process text or receipt files/images right now.")
+    return "", 200
 
 
 @app.route("/webhook", methods=["GET"])
@@ -196,14 +228,17 @@ def verify_webhook():
     return "Forbidden", 403
 
 
+# ------------------- Media handlers -------------------
 def handle_media_message(sender: str, message: Dict[str, Any]):
     success, file_bytes, filename, mime_type = download_media(message)
     if not success or file_bytes is None:
-        return jsonify(build_whatsapp_response(mime_type or "Media processing failed.")), 500
+        send_whatsapp_message(sender, "Media processing failed.")
+        return
 
     visits_success, visits, err = fetch_visits()
     if not visits_success:
-        return jsonify(build_whatsapp_response(err)), 500
+        send_whatsapp_message(sender, err)
+        return
 
     visit_lines = ["Choose the visit for this receipt by replying with its number:"]
     for i, visit in enumerate(visits, 1):
@@ -219,7 +254,7 @@ def handle_media_message(sender: str, message: Dict[str, Any]):
         "visits": visits,
     }
 
-    return jsonify(build_whatsapp_response("\n".join(visit_lines))), 200
+    send_whatsapp_message(sender, "\n".join(visit_lines))
 
 
 def handle_visit_selection(sender: str, message: Dict[str, Any]):
@@ -227,25 +262,30 @@ def handle_visit_selection(sender: str, message: Dict[str, Any]):
     body = message.get("text", {}).get("body", "").strip().lower()
 
     if not body:
-        return jsonify(build_whatsapp_response("Please reply with a number or 'cancel'.")), 200
+        send_whatsapp_message(sender, "Please reply with a number or 'cancel'.")
+        return
     if body in {"cancel", "stop", "exit"}:
         reset_user_state(sender)
-        return jsonify(build_whatsapp_response("Receipt upload cancelled.")), 200
+        send_whatsapp_message(sender, "Receipt upload cancelled.")
+        return
 
     try:
         sel = int(body)
     except ValueError:
-        return jsonify(build_whatsapp_response("That's not a number.")), 200
+        send_whatsapp_message(sender, "That's not a number.")
+        return
 
     visits = state.get("visits", [])
     if sel < 1 or sel > len(visits):
-        return jsonify(build_whatsapp_response("Invalid selection.")), 200
+        send_whatsapp_message(sender, "Invalid selection.")
+        return
 
     visit = visits[sel - 1]
     visit_id = visit.get("id")
     if not visit_id:
         reset_user_state(sender)
-        return jsonify(build_whatsapp_response("Selected visit missing ID.")), 500
+        send_whatsapp_message(sender, "Selected visit missing ID.")
+        return
 
     ok, msg = upload_receipt(
         visit_id,
@@ -255,14 +295,18 @@ def handle_visit_selection(sender: str, message: Dict[str, Any]):
     )
 
     reset_user_state(sender)
-    reply = f"Receipt uploaded successfully for visit {visit_id}.\nResult: {msg}" if ok else msg
-    return jsonify(build_whatsapp_response(reply)), (200 if ok else 500)
+    if ok:
+        send_whatsapp_message(sender, f"Receipt uploaded successfully for visit {visit_id}.\nResult: {msg}")
+    else:
+        send_whatsapp_message(sender, msg)
 
 
+# ------------------- Health check -------------------
 @app.route("/health", methods=["GET"])
 def health_check() -> Any:
     return jsonify({"status": "ok"}), 200
 
 
+# ------------------- Entry -------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
