@@ -133,8 +133,9 @@ def call_rag_endpoint(question: str) -> str:
 def get_participant_visits() -> list:
     """Fetch participant visit schedule."""
     try:
-        url = f"{BACKEND_BASE_URL}/api/participants/{PARTICIPANT_ID}/visits"
-        r = requests.get(url, timeout=10)
+        url = f"{BACKEND_BASE_URL}/api/visits"
+        params = {"participant_id": PARTICIPANT_ID}
+        r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
         return r.json()
     except Exception as e:
