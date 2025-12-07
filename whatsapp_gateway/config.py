@@ -2,7 +2,14 @@ import os
 import logging
 from dotenv import load_dotenv
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+)
+logger = logging.getLogger("gateway")
+
 load_dotenv()
+
 
 def get_secret(key: str) -> str | None:
     """Load a secret from environment or Docker secret file."""
@@ -11,7 +18,7 @@ def get_secret(key: str) -> str | None:
         logger.error("Failed to retreive secrets from .env.")
     return val
 
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000")
 PARTICIPANT_ID = os.getenv("PARTICIPANT_ID", "418fb3c2-f745-4976-aeea-48624b5ea1f3")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "12345")
 WHATSAPP_TOKEN = get_secret("WHATSAPP_TOKEN")
@@ -23,13 +30,6 @@ MAX_MEDIA_SIZE = int(os.getenv("MAX_MEDIA_SIZE", 5 * 1024 * 1024))  # 5 MB defau
 ALLOWED_MIMES = set(os.getenv("ALLOWED_MIMES", "application/pdf,image/jpeg,image/png").split(","))
 ALLOWED_SENDERS = set(filter(None, os.getenv("ALLOWED_SENDERS", "").split(",")))
 DEDUP_TTL = int(os.getenv("DEDUP_TTL", 60))  # seconds
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-)
-logger = logging.getLogger("gateway")
 
 
 if not VERIFY_TOKEN or VERIFY_TOKEN == "12345":
