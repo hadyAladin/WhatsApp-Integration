@@ -1,6 +1,6 @@
 import os
 import logging
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 logging.basicConfig(
     level=logging.INFO,
@@ -8,7 +8,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gateway")
 
-load_dotenv()
+load_dotenv(find_dotenv(),override=True)
 
 
 def get_secret(key: str) -> str | None:
@@ -31,6 +31,19 @@ ALLOWED_MIMES = set(os.getenv("ALLOWED_MIMES", "application/pdf,image/jpeg,image
 ALLOWED_SENDERS = set(filter(None, os.getenv("ALLOWED_SENDERS", "").split(",")))
 DEDUP_TTL = int(os.getenv("DEDUP_TTL", 60))  # seconds
 
+logger.info("=== Loaded Gateway Environment Variables ===")
+logger.info(f"BACKEND_BASE_URL      = {BACKEND_BASE_URL!r}")
+logger.info(f"PARTICIPANT_ID        = {PARTICIPANT_ID!r}")
+logger.info(f"VERIFY_TOKEN          = {VERIFY_TOKEN!r}")
+logger.info(f"WHATSAPP_TOKEN        = {WHATSAPP_TOKEN!r}")
+logger.info(f"PHONE_NUMBER_ID       = {PHONE_NUMBER_ID!r}")
+logger.info(f"WHATSAPP_APP_SECRET   = {WHATSAPP_APP_SECRET!r}")
+logger.info(f"BACKEND_SERVICE_TOKEN = {BACKEND_SERVICE_TOKEN!r}")
+logger.info(f"MAX_MEDIA_SIZE        = {MAX_MEDIA_SIZE!r}")
+logger.info(f"ALLOWED_MIMES         = {ALLOWED_MIMES!r}")
+logger.info(f"ALLOWED_SENDERS       = {ALLOWED_SENDERS!r}")
+logger.info(f"DEDUP_TTL             = {DEDUP_TTL!r}")
+logger.info("================================================")
 
 if not VERIFY_TOKEN or VERIFY_TOKEN == "12345":
     logger.error("Weak or missing VERIFY_TOKEN detected — replace immediately.")
