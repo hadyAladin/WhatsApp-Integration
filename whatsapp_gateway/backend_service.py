@@ -5,6 +5,8 @@ from .config import BACKEND_BASE_URL, BACKEND_SERVICE_TOKEN, PARTICIPANT_ID, log
 
 # persistent session for connection pooling
 _session = requests.Session()
+# Avoid picking up system proxy settings (which can block localhost calls under systemd)
+_session.trust_env = False
 _retry = Retry(total=3, backoff_factor=0.2, status_forcelist=[429, 500, 502, 503, 504])
 _adapter = HTTPAdapter(pool_connections=20, pool_maxsize=100, max_retries=_retry)
 _session.mount("https://", _adapter)
