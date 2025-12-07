@@ -32,8 +32,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gateway")
 
+logger.info("=== Loaded Gateway Environment Variables ===")
+logger.info(f"BACKEND_BASE_URL      = {BACKEND_BASE_URL!r}")
+logger.info(f"PARTICIPANT_ID        = {PARTICIPANT_ID!r}")
+logger.info(f"VERIFY_TOKEN          = {VERIFY_TOKEN!r}")
+logger.info(f"WHATSAPP_TOKEN        = {WHATSAPP_TOKEN!r}")
+logger.info(f"PHONE_NUMBER_ID       = {PHONE_NUMBER_ID!r}")
+logger.info(f"WHATSAPP_APP_SECRET   = {WHATSAPP_APP_SECRET!r}")
+logger.info(f"BACKEND_SERVICE_TOKEN = {BACKEND_SERVICE_TOKEN!r}")
+logger.info(f"MAX_MEDIA_SIZE        = {MAX_MEDIA_SIZE!r}")
+logger.info(f"ALLOWED_MIMES         = {ALLOWED_MIMES!r}")
+logger.info(f"ALLOWED_SENDERS       = {ALLOWED_SENDERS!r}")
+logger.info(f"DEDUP_TTL             = {DEDUP_TTL!r}")
+logger.info("================================================")
 
-if not VERIFY_TOKEN or VERIFY_TOKEN == "12345":
-    logger.error("Weak or missing VERIFY_TOKEN detected — replace immediately.")
-if not BACKEND_BASE_URL.lower().startswith("https://"):
-    logger.warning("BACKEND_BASE_URL is not HTTPS — use HTTPS in production.")
