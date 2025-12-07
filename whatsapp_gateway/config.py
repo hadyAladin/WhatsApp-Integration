@@ -10,6 +10,7 @@ logger = logging.getLogger("gateway")
 
 load_dotenv(find_dotenv(),override=True)
 
+
 def get_secret(key: str) -> str | None:
     """Load a secret from environment or Docker secret file."""
     val = os.getenv(key)
@@ -17,7 +18,7 @@ def get_secret(key: str) -> str | None:
         logger.error("Failed to retreive secrets from .env.")
     return val
 
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000")
 PARTICIPANT_ID = os.getenv("PARTICIPANT_ID", "418fb3c2-f745-4976-aeea-48624b5ea1f3")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "12345")
 WHATSAPP_TOKEN = get_secret("WHATSAPP_TOKEN")
