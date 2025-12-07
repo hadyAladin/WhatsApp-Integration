@@ -24,7 +24,7 @@ def headers():
 
 def fetch_trial_id() -> str | None:
     try:
-        r = _session.get(f"{BACKEND_BASE_URL}/api/participants/{PARTICIPANT_ID}", headers=headers(), timeout=10)
+        r = _session.get(f"{BACKEND_BASE_URL}/api/participants/{PARTICIPANT_ID}", headers=headers(), timeout=500)
         r.raise_for_status()
         trial_id = r.json().get("trial_id")
         logger.info(f"[Backend] trial_id={trial_id}")
@@ -44,7 +44,7 @@ def send_chat(question: str) -> str:
     url = f"{BACKEND_BASE_URL}/participants/chat/send"
     try:
         logger.info(f"[Backend] → POST {url}")
-        r = _session.post(url, json=payload, headers=headers(), timeout=10)
+        r = _session.post(url, json=payload, headers=headers(), timeout=500)
         r.raise_for_status()
         data = r.json()
         return data.get("answer") or "No answer returned."

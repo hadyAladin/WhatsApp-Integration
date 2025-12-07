@@ -40,7 +40,7 @@ def get_media_url(media_id: str) -> str | None:
     try:
         url = f"https://graph.facebook.com/v20.0/{media_id}"
         headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-        r = _session.get(url, headers=headers, timeout=10)
+        r = _session.get(url, headers=headers, timeout=500)
         r.raise_for_status()
         return r.json().get("url")
     except Exception as e:
