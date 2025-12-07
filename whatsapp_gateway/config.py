@@ -1,6 +1,6 @@
 import os
 import logging
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 logging.basicConfig(
     level=logging.INFO,
@@ -8,8 +8,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gateway")
 
-load_dotenv()
-
+load_dotenv(find_dotenv(),override=True)
 
 def get_secret(key: str) -> str | None:
     """Load a secret from environment or Docker secret file."""
