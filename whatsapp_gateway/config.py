@@ -2,8 +2,13 @@ import os
 import logging
 from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(find_dotenv(),override=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+)
+logger = logging.getLogger("gateway")
 
+load_dotenv(find_dotenv(),override=True)
 
 def get_secret(key: str) -> str | None:
     """Load a secret from environment or Docker secret file."""
@@ -25,13 +30,6 @@ ALLOWED_MIMES = set(os.getenv("ALLOWED_MIMES", "application/pdf,image/jpeg,image
 ALLOWED_SENDERS = set(filter(None, os.getenv("ALLOWED_SENDERS", "").split(",")))
 DEDUP_TTL = int(os.getenv("DEDUP_TTL", 60))  # seconds
 
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-)
-logger = logging.getLogger("gateway")
-
 logger.info("=== Loaded Gateway Environment Variables ===")
 logger.info(f"BACKEND_BASE_URL      = {BACKEND_BASE_URL!r}")
 logger.info(f"PARTICIPANT_ID        = {PARTICIPANT_ID!r}")
@@ -46,3 +44,7 @@ logger.info(f"ALLOWED_SENDERS       = {ALLOWED_SENDERS!r}")
 logger.info(f"DEDUP_TTL             = {DEDUP_TTL!r}")
 logger.info("================================================")
 
+if not VERIFY_TOKEN or VERIFY_TOKEN == "12345":
+    logger.error("Weak or missing VERIFY_TOKEN detected — replace immediately.")
+if not BACKEND_BASE_URL.lower().startswith("https://"):
+    logger.warning("BACKEND_BASE_URL is not HTTPS — use HTTPS in production.")
